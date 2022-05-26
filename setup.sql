@@ -395,6 +395,14 @@ AS $$
                 )
             )
     )
+    , ready_deps AS (
+        SELECT DISTINCT
+            jd.job_name
+        ,   jd.dependency
+        FROM gtl.job_dependency AS jd
+        JOIN ready_jobs AS rj
+            ON jd.job_name = rj.job_name
+    )
     SELECT
         rj.job_name
     ,   rj.job_cmd
@@ -408,17 +416,17 @@ AS $$
                 WHEN
                     EXISTS (
                         SELECT 1
-                        FROM gtl.job_dependency AS jd
+                        FROM ready_deps AS rd
                         WHERE
-                            rj.job_name = jd.job_name
+                            rj.job_name = rd.job_name
                     )
                     AND NOT EXISTS (
                         SELECT 1
                         FROM ready_jobs AS rj2
-                        JOIN gtl.job_dependency AS jd2
-                            ON rj2.job_name = jd2.job_name
+                        JOIN ready_deps AS rd
+                            ON rj2.job_name = rd.job_name
                         WHERE
-                            rj.job_name = jd2.dependency
+                            rj.job_name = rd.dependency
                     )
                     THEN 4
                 WHEN rj.seconds_since_latest_attempt > (rj.min_seconds_between_attempts * 4) THEN 3
